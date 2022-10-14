@@ -41,7 +41,40 @@ cons_write_crlf:
 cons_writeline:
     call    cons_write
     call    cons_write_crlf
-    ret    
+    ret   
+
+cons_write_int:
+    # output the 16-bit unsigned integer value in BX to the screen
+    # as an ASCII string of digits.
+    # put num in dx (high) and ax (low), Dx = 0. take AX, use integer devision to divide it by 10.
+    # take each didgit and offset it into ascii to print it out
+    movw %bx, %ax
+    write_int_cont:
+    xor %dx, %dx
+    movw $10, %cx
+    div %cx
+
+    # %ax, (num_result)
+    # %dx, (num_modulus)
+
+    # offset modulus (dx) by 48
+    add $0x30, %dx 
+    # move result to bx for safekeeping before output occurs
+    movw %ax, %bx
+
+    # WRITE
+    movb    $0x0e, %ah 
+    movb    %dl, %al 
+    int     $0x10 
+    movw %bx, %ax # move it back to ax
+    # -if num_result equal zero, jump to end
+    cmp $0x00, %ax
+    je write_int_end
+
+    jmp write_int_cont
+
+    write_int_end:
+    ret
 
 real_start:
     movb    %dl, (boot_device) # Boot device number is passed in DL from BIOS. Save it hear since DL might get trashed
@@ -65,6 +98,10 @@ harddrive:
 finish:
     call    cons_writeline
 
+    movw $0xFFFF,(num)
+    movw (num), %bx
+    call cons_write_int
+
 endless_loop:                   # Loop forever more
     jmp     endless_loop    
 
@@ -79,4 +116,4 @@ booted_from_msg:
     .string "Booting from "
 fd: .string "floppy disk"
 hd: .string "hard drive"
-
+num: .string
