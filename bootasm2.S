@@ -44,18 +44,14 @@ cons_writeline:
     ret   
 
 cons_write_int:
-    # output the 16-bit unsigned integer value in BX to the screen
-    # as an ASCII string of digits.
-    # put num in dx (high) and ax (low), Dx = 0. take AX, use integer devision to divide it by 10.
-    # take each didgit and offset it into ascii to print it out
+    # output the 16-bit unsigned integer value in BX to the screen as an ASCII string of digits.
+    # div takes ax and divides it by the given register. output is e high 16 bits in DX (remainder) and the low 16 bits in AX (quotient)
+    # Take each didgit and offset it into ascii to print it out
     movw %bx, %ax
     write_int_cont:
     xor %dx, %dx
     movw $10, %cx
     div %cx
-
-    # %ax, (num_result)
-    # %dx, (num_modulus)
 
     # offset modulus (dx) by 48
     add $0x30, %dx 
