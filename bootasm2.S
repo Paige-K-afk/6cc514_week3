@@ -83,6 +83,31 @@ cons_write_int:
 
     ret
 
+cons_write_hex:
+    movw $0, %cx # cx is our counter.
+    # the value we will be transforming is in %dx, from %bx, in the form $65535
+    
+    hex_cont: # so %cx doesnt keep getting reset.
+    movw %bx, %dx
+    # use bit twiddling to shove the chunks out to only have the chunks you want.
+    
+    # ROL %dx 
+
+    SHL %cl ,%dx # shove an ammount left so bit we want is all the way at the left significant bit.
+
+    SHR $12, %dx # shoved all the way so only front part remains
+    # offset cx to get to the ascii table
+    add $0x30, %dx 
+    # Write
+    movb    $0x0e, %ah 
+    movb    %dl, %al 
+    int     $0x10 
+
+    add $1, %cx # increment our counter
+    cmp $4, %cx
+    jne hex_cont
+    ret
+
 real_start:
     movb    %dl, (boot_device) # Boot device number is passed in DL from BIOS. Save it hear since DL might get trashed
 
@@ -106,6 +131,30 @@ finish:
     call    cons_writeline
 
     movw $0xFFFF, %bx
+    call cons_write_int
+    call cons_write_crlf
+    movw $0x5432, %bx # in the hex writer, this shows as 5:5:, which is not correct. There is an issue with the hex display thing.
+    call cons_write_hex
+    call cons_write_crlf
+    call cons_write_crlf
+
+    # test values given in exersise:
+    movw $65535, %bx # Display numbers in hex
+    call cons_write_hex
+    call cons_write_crlf
+    movw $4660, %bx #  this is 0x1234 in hex. it displays as 1249. There is an issue with the hex display thing.
+    call cons_write_hex
+    call cons_write_crlf
+    movw $0, %bx
+    call cons_write_hex
+    call cons_write_crlf
+    movw $65535, %bx # Display unsigned short numbers
+    call cons_write_int
+    call cons_write_crlf
+    movw $1234, %bx
+    call cons_write_int
+    call cons_write_crlf
+    movw $0, %bx
     call cons_write_int
     call cons_write_crlf
 
