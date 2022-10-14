@@ -48,6 +48,7 @@ cons_write_int:
     # div takes ax and divides it by the given register. output is e high 16 bits in DX (remainder) and the low 16 bits in AX (quotient)
     # Take each didgit and offset it into ascii to print it out
     movw %bx, %ax
+    movw $0, %bx # bx becomes our stack pusher counter.
     write_int_cont:
     xor %dx, %dx
     movw $10, %cx
@@ -55,21 +56,31 @@ cons_write_int:
 
     # offset modulus (dx) by 48
     add $0x30, %dx 
-    # move result to bx for safekeeping before output occurs
-    movw %ax, %bx
 
-    # WRITE
-    movb    $0x0e, %ah 
-    movb    %dl, %al 
-    int     $0x10 
-    movw %bx, %ax # move it back to ax
-    # -if num_result equal zero, jump to end
+    # write to buffer (we are using the stack) 
+    push %dx        # push to stack
+    # Update the number of things pushed to the stack   
+    add $1, %bx
+
+    # -if the quotient is equal to zero, jump to end
     cmp $0x00, %ax
     je write_int_end
 
-    jmp write_int_cont
+    jmp write_int_cont # this will run if quotient is not 0 (because to get here the je has to fall through), looping this function.
 
     write_int_end:
+    # write buffer (stack) in reverse
+    pop %dx 
+    # Write
+    movb    $0x0e, %ah 
+    movb    %dl, %al 
+    int     $0x10 
+    # Decrement number of things we have on stack
+    add $-1, %bx
+    # Compare our custom stack pointer to 0.
+    cmp $0x00, %bx
+    jne write_int_end  # -if %bx is not zero, go back to start of display loop.
+
     ret
 
 real_start:
@@ -94,9 +105,9 @@ harddrive:
 finish:
     call    cons_writeline
 
-    movw $0xFFFF,(num)
-    movw (num), %bx
+    movw $0xFFFF, %bx
     call cons_write_int
+    call cons_write_crlf
 
 endless_loop:                   # Loop forever more
     jmp     endless_loop    
@@ -112,4 +123,3 @@ booted_from_msg:
     .string "Booting from "
 fd: .string "floppy disk"
 hd: .string "hard drive"
-num: .string
