@@ -69,12 +69,12 @@ cons_write_int:
     jne write_int_cont # this will run if quotient is not 0
 
     movw    $IntBuffer, %si  
-    call    cons_writeline
+    call    cons_write
     ret
 
 HexChars: .ascii "0123456789ABCDEF"
 cons_write_hex:
-        movb    $0x0e, %ah 
+    movb    $0x0e, %ah 
     movw $4, %cx # cx is our counter.
     
     hex_cont: # so %cx doesnt keep getting reset.
