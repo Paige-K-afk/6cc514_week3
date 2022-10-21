@@ -43,12 +43,13 @@ cons_writeline:
     call    cons_write_crlf
     ret   
 
+IntBuffer: .string "     "
 cons_write_int:
     # output the 16-bit unsigned integer value in BX to the screen as an ASCII string of digits.
     # div takes ax and divides it by the given register. output is e high 16 bits in DX (remainder) and the low 16 bits in AX (quotient)
     # Take each didgit and offset it into ascii to print it out
     movw %bx, %ax
-    movw $0, %bx # bx becomes our stack pusher counter.
+    movw $IntBuffer +4, %si
     write_int_cont:
     xor %dx, %dx
     movw $10, %cx
@@ -57,55 +58,35 @@ cons_write_int:
     # offset modulus (dx) by 48
     add $0x30, %dx 
 
-    # write to buffer (we are using the stack) 
-    push %dx        # push to stack
-    # Update the number of things pushed to the stack   
-    add $1, %bx
+    # write to buffer 
+    movb %dl, (%si)
+
+    # decrement SI   
+    dec %si
 
     # -if the quotient is equal to zero, jump to end
     cmp $0x00, %ax
-    je write_int_end
+    jne write_int_cont # this will run if quotient is not 0
 
-    jmp write_int_cont # this will run if quotient is not 0 (because to get here the je has to fall through), looping this function.
-
-    write_int_end:
-    # write buffer (stack) in reverse
-    pop %dx 
-    # Write
-    movb    $0x0e, %ah 
-    movb    %dl, %al 
-    int     $0x10 
-    # Decrement number of things we have on stack
-    add $-1, %bx
-    # Compare our custom stack pointer to 0.
-    cmp $0x00, %bx
-    jne write_int_end  # -if %bx is not zero, go back to start of display loop.
-
+    movw    $IntBuffer, %si  
+    call    cons_writeline
     ret
 
+HexChars: .ascii "0123456789ABCDEF"
 cons_write_hex:
-    movw $0, %cx # cx is our counter.
-    # the value we will be transforming is in %dx, from %bx, in the form $65535
+        movb    $0x0e, %ah 
+    movw $4, %cx # cx is our counter.
     
     hex_cont: # so %cx doesnt keep getting reset.
-    movw %bx, %dx
     # use bit twiddling to shove the chunks out to only have the chunks you want.
     
-    # ROL %dx 
-
-    SHL %cl ,%dx # shove an ammount left so bit we want is all the way at the left significant bit.
-
-    SHR $12, %dx # shoved all the way so only front part remains
-    # offset cx to get to the ascii table
-    add $0x30, %dx 
-    # Write
-    movb    $0x0e, %ah 
-    movb    %dl, %al 
+    ROL $4, %bx 
+    movw %bx, %si
+    AND $0x000f, %si
+    movb HexChars(%si), %al
     int     $0x10 
-
-    add $1, %cx # increment our counter
-    cmp $4, %cx
-    jne hex_cont
+    loop hex_cont
+   
     ret
 
 real_start:
