@@ -68,7 +68,7 @@ cons_write_int:
     cmp $0x00, %ax
     jne write_int_cont # this will run if quotient is not 0
 
-    movw    $IntBuffer, %si  
+    inc %si  
     call    cons_write
     ret
 
